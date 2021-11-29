@@ -1,0 +1,26 @@
+<script type="text/javascript">
+    RED.nodes.registerType('typo-service',{
+        category: 'function',
+        color: '#a6bbcf',
+        defaults: {
+            name: {value:""}
+        },
+        inputs:1,
+        outputs:1,
+        icon: "file.png",
+        label: function() {
+            return this.name||"typo-service";
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="typo-service">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="typo-service">
+    <p>A simple service that converts the message payloads into all lower-case characters</p>
+</script>
