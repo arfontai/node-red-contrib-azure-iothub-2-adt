@@ -1,26 +1,79 @@
 <script type="text/javascript">
-    RED.nodes.registerType('typo-service',{
-        category: 'function',
-        color: '#a6bbcf',
+    RED.nodes.registerType('twin-create',{
+        category: 'Azure IoT',
+        color: '#00A4EF',
         defaults: {
-            name: {value:""}
+			DigitalTwinsUrl: {value:"", required:true},
+			TenantId: {value:"", required:true},
+			ClientId: {value:"", required:true},
+			ClientSecret: {value:"", required:true}
         },
         inputs:1,
         outputs:1,
-        icon: "file.png",
+        icon: "adt.png",
         label: function() {
-            return this.name||"typo-service";
-        }
+            return this.name||"twin-create";
+        },
+		paletteLabel: function(){
+            return "Create Twin";
+        },
+        oneditprepare: function() {
+            let node = this;
+
+            // Enable tabbed interaction
+            let tabs = RED.tabs.create({
+            id: "node-input-adt-tabs",
+                onchange: function(tab) {
+                    $("#node-input-adt-tabs-content")
+                        .children()
+                        .hide();
+                    $("#" + tab.id).show();
+                }
+            });
+
+            tabs.addTab({
+                id: "compact-adt-tab-general",
+                label: this._("ADT General params")
+            });
+
+            tabs.addTab({
+                id: "compact-adt-tab-twin",
+                label: this._("Twin data")
+            });
+        },
     });
 </script>
 
-<script type="text/html" data-template-name="typo-service">
+<script type="text/html" data-template-name="twin-create">
     <div class="form-row">
-        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
-        <input type="text" id="node-input-name" placeholder="Name">
+        <ul style="background: #fff; min-width: 680px; margin-bottom: 20px;" id="node-input-adt-tabs"></ul>
+    </div>
+    <div id="node-input-adt-tabs-content" style="min-height: 170px;">
+        <div id="compact-adt-tab-general" style="display:none">
+            <div class="form-row">
+                <label for="node-input-DigitalTwinsUrl"><i class="icon-tag"></i> <span>ADT URL</span></label>
+                <input type="text" id="node-input-DigitalTwinsUrl" placeholder="%DigitalTwinsUrl%">
+            </div>
+			<div class="form-row">
+                <label for="node-input-TenantId"><i class="icon-tag"></i> <span>TenantId</span></label>
+                <input type="text" id="node-input-TenantId" placeholder="%TenantId%">
+            </div>
+			<div class="form-row">
+                <label for="node-input-ClientId"><i class="icon-tag"></i> <span>ClientId</span></label>
+                <input type="text" id="node-input-ClientId" placeholder="%ClientId%">
+            </div>
+			<div class="form-row">
+                <label for="node-input-ClientSecret"><i class="icon-tag"></i> <span>ClientSecret</span></label>
+                <input type="text" id="node-input-ClientSecret" placeholder="%ClientSecret%">
+            </div>
+        </div>
+        <div id="compact-adt-tab-twin" style="display:none">
+            <div class="form-row dps-row">
+            </div>
+        </div>
     </div>
 </script>
 
-<script type="text/html" data-help-name="typo-service">
-    <p>A simple service that converts the message payloads into all lower-case characters</p>
+<script type="text/html" data-help-name="twin-create">
+    <p>A simple service that create a Digital Twin at ADT</p>
 </script>
