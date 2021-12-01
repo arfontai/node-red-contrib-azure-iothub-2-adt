@@ -7,7 +7,6 @@ For the moment we introduced two modules (more to come)
 - ADTTwinCreate: that create a Twin at Azure Digital Twins
 
 ## Related GitHub projects
-https://github.com/iotblackbelt/node-red-contrib-azure-iot-device
-https://github.com/Azure-Samples/web-apps-node-iot-hub-data-visualization![image](https://user-images.githubusercontent.com/64192034/144268615-7939a642-fd01-42de-95c7-7bb02b5d5bd3.png)
-https://github.com/Azure/azure-iot-sdk-node
-
+Great Node project to simulate an Azure IoT Device: https://github.com/iotblackbelt/node-red-contrib-azure-iot-device<p>
+Sample Node app to ingest data from IoT Hub: https://github.com/Azure-Samples/web-apps-node-iot-hub-data-visualization<p>
+Azure IoT Hub SDK for Node: https://github.com/Azure/azure-iot-sdk-node<p>
