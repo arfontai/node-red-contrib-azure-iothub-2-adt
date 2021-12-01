@@ -1,5 +1,5 @@
 <script type="text/javascript">
-    RED.nodes.registerType('twin-create',{
+    RED.nodes.registerType('adttwincreate',{
         category: 'Azure IoT',
         color: '#00A4EF',
         defaults: {
@@ -30,21 +30,41 @@
                     $("#" + tab.id).show();
                 }
             });
-
             tabs.addTab({
                 id: "compact-adt-tab-general",
                 label: this._("ADT General params")
             });
-
             tabs.addTab({
                 id: "compact-adt-tab-twin",
                 label: this._("Twin data")
             });
+        }
+    });
+	
+	RED.nodes.registerType('azureiothubreceiver',{
+        category: 'Azure IoT',
+        color: '#00A4EF',
+        defaults: {
+			Name: {value:"", required:false},
+			ConnectionString: {value:"", required:true},
+			ConsumerGroup: {value:"", required:true}
         },
+        inputs:0,
+        outputs:1,
+        icon: "azureiothub.png",
+        label: function() {
+            return this.name||"IoT Hub Receiver";
+        },
+        paletteLabel: function(){
+            return "IoT Hub Receiver";
+        },
+		oneditprepare: function() {
+            let node = this;
+		}
     });
 </script>
 
-<script type="text/html" data-template-name="twin-create">
+<script type="text/html" data-template-name="adttwincreate">
     <div class="form-row">
         <ul style="background: #fff; min-width: 680px; margin-bottom: 20px;" id="node-input-adt-tabs"></ul>
     </div>
@@ -74,6 +94,29 @@
     </div>
 </script>
 
-<script type="text/html" data-help-name="twin-create">
+<script type="text/html" data-help-name="adttwincreate">
     <p>A simple service that create a Digital Twin at ADT</p>
 </script>
+
+<script type="text/x-red" data-template-name="azureiothubreceiver">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="%Name%">
+    </div>
+    <div class="form-row">
+        <label for="node-input-ConnectionString"><i class="icon-tag"></i> <span>Connection String</span></label>
+        <input type="text" id="node-input-ConnectionString" placeholder="%ConnectionString%">
+    </div>
+	<div class="form-row">
+        <label for="node-input-ConsumerGroup"><i class="icon-tag"></i> <span>Consumer Group</span></label>
+        <input type="text" id="node-input-ConsumerGroup" placeholder="%ConsumerGroup%">
+    </div>
+	<div class="form-row">
+        <p>/!\ when your node falls into error because of a wrong configuration, you have to restart node-red to apply your update.</p>
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="azureiothubreceiver">
+    <p>A simple node for receiving device-to-cloud messages via default Azure Events Hub endpoint or Consumer Groups.</p>
+</script>
+

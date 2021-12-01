@@ -8,10 +8,11 @@ module.exports = function(RED)
 	const buildingTwin = require("./dtdl/digitalTwins/buildingTwin.json");
 	const building = require("./dtdl/models/building.json");
 
+	const EventHubReader = require('./scripts/iothub/event-hub-reader.js');
+
     function TwinCreate(config) {
         // Create the Node-RED node
         RED.nodes.createNode(this, config);
-
 		const node = this;
 		
 		node.on('input', async function(msg) 
@@ -57,11 +58,84 @@ module.exports = function(RED)
         });
 	}
 	
+	function AzureIoTHubReceiver(config) {
+        // Create the Node-RED node
+        RED.nodes.createNode(this, config);
+		const node = this;
+
+		node.ConnectionString = config.ConnectionString;
+		node.ConsumerGroup = config.ConsumerGroup;
+
+        this.client = null;
+        this.reconnectTimer = null;
+
+        setStatus(node, statusEnum.disconnected);
+
+		try {
+			const eventHubReader = new EventHubReader(node.ConnectionString, node.ConsumerGroup);
+			
+			(async () => {
+				await eventHubReader.startReadMessage(node, (message, date, deviceId) => {
+					try {
+						setStatus(node, statusEnum.received);
+						
+						console.log('message: ' + JSON.stringify(message));
+						console.log('date: ' + date);
+						console.log('deviceId: ' + deviceId);
+						
+						const payload = {
+							IoTData: message,
+							MessageDate: date || Date.now().toISOString(),
+							DeviceId: deviceId,
+						};
+
+						node.send(payload);
+					} catch (err) {
+						error(node, err, 'Error while trying to get a message from IoT Hub.');
+						setStatus(node, statusEnum.error);
+					}
+				});
+			})().catch();
+		} catch (exception) {
+			node.log(exception);
+			console.log(exception);
+			error(node, exception, 'Error while trying to connect to Event Hubs.');
+            setStatus(node, statusEnum.error);
+		}
+    }
+	
+	///////////////////////////
+	// Registration of Nodes //
+	///////////////////////////
+	
+    RED.nodes.registerType("adttwincreate",TwinCreate, {
+        defaults: {
+			DigitalTwinsUrl: {value:"", required:true},
+			TenantId: {value:"", required:true},
+			ClientId: {value:"", required:true},
+			ClientSecret: {value:"", required:true}
+        }
+	});
+	
+	RED.nodes.registerType("azureiothubreceiver", AzureIoTHubReceiver, {
+        defaults: {
+            Name: {value:"", required:false},
+			ConnectionString: { value:"", required:true},
+			ConsumerGroup: { value: "", required:true}
+        }
+    });
+	
+	///////////////////
+	// Utils methods //
+	///////////////////
+	
 	const statusEnum = {
         connected: { fill: "green", shape:"dot", text: "Connected" },
         connecting: { fill: "blue", shape:"dot", text: "Connecting" },
         provisioning: { fill: "blue", shape:"dot", text: "Provisioning" },
         disconnected: { fill: "red", shape:"dot", text: "Disconnected" },
+		sent: { fill: "blue", shape:"dot", text: "Message Sent" },
+        received: { fill: "yellow", shape:"dot", text: "Message Received" },
         error: { fill: "grey", shape:"dot", text: "Error" }
     };
 	
@@ -79,12 +153,10 @@ module.exports = function(RED)
         node.error(msg);
     }
 	
-    RED.nodes.registerType("twin-create",TwinCreate, {
-        defaults: {
-			DigitalTwinsUrl: {value:"", required:true},
-			TenantId: {value:"", required:true},
-			ClientId: {value:"", required:true},
-			ClientSecret: {value:"", required:true}
-        }
-	});
+	function printResultFor(node, op) {
+        return function printResult(err, res) {
+            if (err) node.error(op + ' error: ' + err.toString());
+            if (res) node.log(op + ' status: ' + res.constructor.name);
+        };
+    }
 }
