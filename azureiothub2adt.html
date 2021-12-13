@@ -1,42 +1,383 @@
 <script type="text/javascript">
-    RED.nodes.registerType('adttwincreate',{
+    RED.nodes.registerType('adtmodellifecycle',{
         category: 'Azure IoT',
         color: '#00A4EF',
         defaults: {
-			DigitalTwinsUrl: {value:"", required:true},
-			TenantId: {value:"", required:true},
-			ClientId: {value:"", required:true},
-			ClientSecret: {value:"", required:true}
+			Name: {value:"", required:false},
+			ADTConnection: {value:"", type:"adt-connection"},
+            operationtype: {value: "", required:true}
         },
         inputs:1,
         outputs:1,
         icon: "adt.png",
         label: function() {
-            return this.name||"twin-create";
+            return this.Name||"Manage Models";
         },
 		paletteLabel: function(){
-            return "Create Twin";
+            return "Manage Models";
+        },
+        oneditprepare: function() {
+            let node = this;
+        }
+    });
+	
+	RED.nodes.registerType('adttwinlifecycle',{
+        category: 'Azure IoT',
+        color: '#00A4EF',
+        defaults: {
+			Name: {value:"", required:false},
+			ADTConnection: {value:"", type:"adt-connection"},
+            operationtype: {value: "", required:true},
+            model: {value: "", required:false},
+            deleterelationships: {value: false, required:false},
+			propmappings: {value: []},
+            tagmappings: {value: []}
+        },
+        inputs:1,
+        outputs:1,
+        icon: "adt.png",
+        label: function() {
+            return this.Name||"Manage Twins";
+        },
+		paletteLabel: function(){
+            return "Manage Twins";
         },
         oneditprepare: function() {
             let node = this;
 
             // Enable tabbed interaction
             let tabs = RED.tabs.create({
-            id: "node-input-adt-tabs",
+            id: "node-input-adttwins-tabs",
                 onchange: function(tab) {
-                    $("#node-input-adt-tabs-content")
+                    $("#node-input-adttwins-tabs-content")
                         .children()
                         .hide();
                     $("#" + tab.id).show();
                 }
             });
             tabs.addTab({
-                id: "compact-adt-tab-general",
+                id: "compact-adttwins-tab-general",
                 label: this._("ADT General params")
             });
             tabs.addTab({
-                id: "compact-adt-tab-twin",
-                label: this._("Twin data")
+                id: "compact-adttwins-tab-propmappings",
+                label: this._("Property Mappings")
+            });
+            tabs.addTab({
+                id: "compact-adttwins-tab-tagmappings",
+                label: this._("Tag Mappings")
+            });
+			
+            $(".model-row").hide();
+            $("#node-input-operationtype").change(function() {
+                if ($(this).val() === "create") {
+                    $(".model-row").show();
+                } else {
+                    $(".model-row").hide();
+                }
+            });
+
+            $(".deleterelationships-row").hide();
+            $("#node-input-operationtype").change(function() {
+                if ($(this).val() === "delete") {
+                    $(".deleterelationships-row").show();
+                } else {
+                    $(".deleterelationships-row").hide();
+                }
+            });
+
+			// Property Mappings
+            let propmappingsItemCount = 0;
+            if (node.propmappings && node.propmappings.length > 0) {
+                propmappingsItemCount = node.propmappings.length;
+                node.propmappings.forEach(function(element, index, array) {
+                    generatePropMappingEntry(element, index);
+                });
+            };
+
+            function generatePropMappingEntry(propmapping, id) {
+                let container = $("<li/>", {
+                style:
+                    "background: #fefefe; margin:0; padding:8px 0px; border-bottom: 1px solid #ccc;"
+                });
+                let row = $('<div id="row' + id + '"/>').appendTo(container);
+
+                $(
+                    '<i style="color: #eee; cursor: move;" class="node-input-adttwins-propmappings-handle fa fa-bars"></i>'
+                ).appendTo(row);
+
+                $(
+                    '<span>IoT Hub</span>'
+                ).appendTo(row);
+                let iotHubNameField = $("<input/>", {
+                    id: "node-input-adttwins-propmappings-iotHubName" + id,
+                    class: "iotHubPropMappingName",
+                    type: "text",
+                    style: "margin-left:5px;margin-right:5px;width:38%;",
+                    placeholder: "iotHubName"
+                }).appendTo(row);
+                iotHubNameField.val(propmapping.iotHubName);
+
+                $(
+                    '<span>ADT</span>'
+                ).appendTo(row);
+                let adtNameField = $("<input/>", {
+                    id: "node-input-adttwins-propmappings-adtName" + id,
+                    class: "adtPropMappingName",
+                    type: "text",
+                    style: "margin-left:5px;margin-right:5px;width:38%;",
+                    placeholder: "adtName"
+                }).appendTo(row);
+                adtNameField.val(propmapping.adtName);
+
+                let finalspan = $("<span/>", {
+                    style: "float: right;margin-right: 10px;"
+                }).appendTo(row);
+
+                let removePropMappingButton = $("<a/>", {
+                href: "#",
+                    id: "node-button-propmapping-remove" + id,
+                    class: "editor-button editor-button-small",
+                    style: "margin-top: 7px; margin-left: 5px;"
+                }).appendTo(finalspan);
+
+                $("<i/>", { class: "fa fa-remove" }).appendTo(removePropMappingButton);
+
+                removePropMappingButton.click(function() {
+                    container.css({ background: "#fee" });
+                    container.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                });
+
+                $("#node-input-adttwins-propmappings-container").append(container);
+            };
+
+            $("#node-input-adttwins-propmappings-container").sortable({
+                axis: "y",
+                handle: ".node-input-adttwins-propmappings-handle",
+                cursor: "move"
+            });
+
+            $(
+                "#node-input-adttwins-propmappings-container .node-input-adttwins-propmappings-handle"
+            ).disableSelection();
+
+
+            $("#node-input-adttwins-propmappings-add").click(function() {
+                if (!propmappingsItemCount || propmappingsItemCount < 0) {
+                    propmappingsItemCount = 0;
+                }
+                generatePropMappingEntry({ iotHubName: "" }, { adtName: "" },propmappingsItemCount++); // length is every time one more than index
+                $("#node-input-adttwins-propmappings-container-div").scrollTop(
+                    $("#node-input-adttwins-propmappings-container-div").get(0).scrollHeight
+                );
+            });
+
+            function switchPropDialogResize() {
+                switchPropMappingsDialogResize();
+            }
+
+            // dialog PropMappings handling
+            function switchPropMappingsDialogResize() {
+                let rows = $(
+                    "#propdialog-form>div:not(.node-input-adttwins-propmappings-container-row)"
+                );
+                let height = $("#propdialog-form").height();
+
+                rows.each(function(index, row) {
+                    height -= row.outerHeight(true);
+                });
+
+                let editorRow = $(
+                    "#propdialog-form>div.node-input-adttwins-propmappings-container-row"
+                );
+                height -=
+                parseInt(editorRow.css("marginTop")) +
+                    parseInt(editorRow.css("marginBottom"));
+                $("#node-input-adttwins-propmappings-container-div").css(
+                    "height",
+                    height + "px"
+                );
+            }
+
+            $("#propdialog").on("propdialogresize", switchPropDialogResize);
+
+            $("#propdialog").on("propdialogopen", function(ev) {
+                let size = $("#propdialog").propdialog("option", "sizeCache-switch");
+                if (size) {
+                    $("#propdialog").propdialog("option", "width", size.width);
+                    $("#propdialog").propdialog("option", "height", size.height);
+                    switchPropDialogResize();
+                } else {
+                    setTimeout(switchPropDialogResize, 10);
+                }
+            });
+
+            $("#propdialog").on("propdialogclose", function(ev, ui) {
+                $("#propdialog").off("propdialogresize", switchPropDialogResize);
+            });
+            
+            // Tag Mappings
+            let tagmappingsItemCount = 0;
+            if (node.tagmappings && node.tagmappings.length > 0) {
+                tagmappingsItemCount = node.tagmappings.length;
+                node.tagmappings.forEach(function(element, index, array) {
+                    generateTagMappingEntry(element, index);
+                });
+            };
+
+            function generateTagMappingEntry(tagmapping, id) {
+                let container = $("<li/>", {
+                style:
+                    "background: #fefefe; margin:0; padding:8px 0px; border-bottom: 1px solid #ccc;"
+                });
+                let row = $('<div id="row' + id + '"/>').appendTo(container);
+
+                $(
+                    '<i style="color: #eee; cursor: move;" class="node-input-adttwins-tagmappings-handle fa fa-bars"></i>'
+                ).appendTo(row);
+
+                $(
+                    '<span>Tag</span>'
+                ).appendTo(row);
+                let iotHubNameField = $("<input/>", {
+                    id: "node-input-adttwins-tagmappings-iotHubName" + id,
+                    class: "iotHubTagMappingName",
+                    type: "text",
+                    style: "margin-left:5px;margin-right:5px;width:38%;",
+                    placeholder: "iotHubName"
+                }).appendTo(row);
+                iotHubNameField.val(tagmapping.iotHubName);
+
+                $(
+                    '<span>Rel.ship</span>'
+                ).appendTo(row);
+                let adtNameField = $("<input/>", {
+                    id: "node-input-adttwins-tagmappings-adtName" + id,
+                    class: "adtTagMappingName",
+                    type: "text",
+                    style: "margin-left:5px;margin-right:5px;width:38%;",
+                    placeholder: "adtName"
+                }).appendTo(row);
+                adtNameField.val(tagmapping.adtName);
+
+                let finalspan = $("<span/>", {
+                    style: "float: right;margin-right: 10px;"
+                }).appendTo(row);
+
+                let removeTagMappingButton = $("<a/>", {
+                href: "#",
+                    id: "node-button-tagmapping-remove" + id,
+                    class: "editor-button editor-button-small",
+                    style: "margin-top: 7px; margin-left: 5px;"
+                }).appendTo(finalspan);
+
+                $("<i/>", { class: "fa fa-remove" }).appendTo(removeTagMappingButton);
+
+                removeTagMappingButton.click(function() {
+                    container.css({ background: "#fee" });
+                    container.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                });
+
+                $("#node-input-adttwins-tagmappings-container").append(container);
+            };
+
+            $("#node-input-adttwins-tagmappings-container").sortable({
+                axis: "y",
+                handle: ".node-input-adttwins-tagmappings-handle",
+                cursor: "move"
+            });
+
+            $(
+                "#node-input-adttwins-tagmappings-container .node-input-adttwins-tagmappings-handle"
+            ).disableSelection();
+
+
+            $("#node-input-adttwins-tagmappings-add").click(function() {
+                if (!tagmappingsItemCount || tagmappingsItemCount < 0) {
+                    tagmappingsItemCount = 0;
+                }
+                generateTagMappingEntry({ iotHubName: "" }, { adtName: "" },tagmappingsItemCount++); // length is every time one more than index
+                $("#node-input-adttwins-tagmappings-container-div").scrollTop(
+                    $("#node-input-adttwins-tagmappings-container-div").get(0).scrollHeight
+                );
+            });
+
+            function switchTagDialogResize() {
+                switchTagMappingsTagDialogResize();
+            }
+
+            // dialog TagMappings handling
+            function switchTagMappingsDialogResize() {
+                let rows = $(
+                    "#tagdialog-form>div:not(.node-input-adttwins-tagmappings-container-row)"
+                );
+                let height = $("#tagdialog-form").height();
+
+                rows.each(function(index, row) {
+                    height -= row.outerHeight(true);
+                });
+
+                let editorRow = $(
+                    "#tagdialog-form>div.node-input-adttwins-tagmappings-container-row"
+                );
+                height -=
+                parseInt(editorRow.css("marginTop")) +
+                    parseInt(editorRow.css("marginBottom"));
+                $("#node-input-adttwins-tagmappings-container-div").css(
+                    "height",
+                    height + "px"
+                );
+            }
+
+            $("#tagdialog").on("tagdialogresize", switchTagDialogResize);
+
+            $("#tagdialog").on("tagdialogopen", function(ev) {
+                let size = $("#tagdialog").dialog("option", "sizeCache-switch");
+                if (size) {
+                    $("#tagdialog").tagdialog("option", "width", size.width);
+                    $("#tagdialog").tagdialog("option", "height", size.height);
+                    switchDialogResize();
+                } else {
+                    setTimeout(switchTagDialogResize, 10);
+                }
+            });
+
+            $("#tagdialog").on("tagdialogclose", function(ev, ui) {
+                $("#tagdialog").off("tagdialogresize", switchTagDialogResize);
+            });
+        },
+		oneditsave: function() {
+            let node = this;
+
+            // Save the tagmappings for this twin
+            let cachePropMappings = $("#node-input-adttwins-propmappings-container").children();
+            node.propmappings = [];
+            cachePropMappings.each(function() {
+                node.propmappings.push({
+                    iotHubName: $(this)
+                        .find(".iotHubPropMappingName")
+                        .val(),
+                    adtName: $(this)
+                        .find(".adtPropMappingName")
+                        .val()    
+                });
+            });
+
+            let cacheTagMappings = $("#node-input-adttwins-tagmappings-container").children();
+            node.tagmappings = [];            
+            cacheTagMappings.each(function() {
+                node.tagmappings.push({
+                    iotHubName: $(this)
+                        .find(".iotHubTagMappingName")
+                        .val(),
+                    adtName: $(this)
+                        .find(".adtTagMappingName")
+                        .val()    
+                });
             });
         }
     });
@@ -46,14 +387,13 @@
         color: '#00A4EF',
         defaults: {
 			Name: {value:"", required:false},
-			ConnectionString: {value:"", required:true},
-			ConsumerGroup: {value:"", required:true}
+			IOTHUBConnection: {value:"", type:"iothub-connection"}
         },
         inputs:0,
         outputs:1,
         icon: "azureiothub.png",
         label: function() {
-            return this.name||"IoT Hub Receiver";
+            return this.Name||"IoT Hub Receiver";
         },
         paletteLabel: function(){
             return "IoT Hub Receiver";
@@ -62,54 +402,207 @@
             let node = this;
 		}
     });
+
+	RED.nodes.registerType('azureeventhubreceiver',{
+        category: 'Azure IoT',
+        color: '#00A4EF',
+        defaults: {
+			Name: {value:"", required:false},
+			ConnectionString: {value:"", required:true},
+			HubName: {value:"", required:true},
+			ConsumerGroup: {value:"", required:true}
+        },
+        inputs:0,
+        outputs:1,
+        icon: "eventhub.png",
+        label: function() {
+            return this.Name||"Event Hub Receiver";
+        },
+        paletteLabel: function(){
+            return "Event Hub Receiver";
+        },
+		oneditprepare: function() {
+            let node = this;
+		}
+    });
+
+	RED.nodes.registerType('azureiothubdevicetwinsender',{
+        category: 'Azure IoT',
+        color: '#00A4EF',
+        defaults: {
+			Name: {value:"", required:false},
+			IOTHUBConnection: {value:"", type:"iothub-connection"},
+			TagsAndDesired: {value:"", required:false},
+			ReportedProperties: {value:"", required:false}
+        },
+        inputs:1,
+        outputs:1,
+        icon: "azureiothub.png",
+        label: function() {
+            return this.Name||"Device Twin sender";
+        },
+        paletteLabel: function(){
+            return "Device Twin sender";
+        },
+		oneditsave: function() {
+			$("#node-input-TagsAndDesired").val(this.tagsEditor.getValue());
+			this.tagsEditor.destroy();
+			delete this.tagsEditor;
+			
+			$("#node-input-ReportedProperties").val(this.reportedPropertiesEditor.getValue());
+			this.reportedPropertiesEditor.destroy();
+			delete this.reportedPropertiesEditor;
+		},
+		oneditcancel: function() {
+			this.tagsEditor.destroy();
+			delete this.tagsEditor;
+
+			this.reportedPropertiesEditor.destroy();
+			delete this.reportedPropertiesEditor;
+		},
+		oneditprepare: function() {
+			this.tagsEditor = RED.editor.createEditor({
+			   id: 'node-input-TagsAndDesired',
+			   mode: 'ace/mode/text',
+			   value: this.TagsAndDesired
+			});
+			
+			this.reportedPropertiesEditor = RED.editor.createEditor({
+			   id: 'node-input-ReportedProperties',
+			   mode: 'ace/mode/text',
+			   value: this.ReportedProperties
+			});
+		}
+    });
+	
+	RED.nodes.registerType('adt-connection',{
+        category: 'config',
+        defaults: {
+			Name: {value:"", required:true},
+			DigitalTwinsUrl: {value:"", required:true},
+			TenantId: {value:"", required:true},
+			ClientId: {value:"", required:true},
+			ClientSecret: {value:"", required:true}
+        },
+        label: function() {
+            return this.Name;
+        }
+    });
+	
+	RED.nodes.registerType('iothub-connection',{
+        category: 'config',
+        defaults: {
+			Name: {value:"", required:true},
+			ConnectionString: {value:"", required:true},
+			ConsumerGroup: {value:"", required:true},
+			DeviceId: {value:"", required:true},
+			DeviceConnectionString: {value:"", required:true},
+        },
+        label: function() {
+            return this.Name;
+        }
+    });
 </script>
 
-<script type="text/html" data-template-name="adttwincreate">
+<script type="text/x-red" data-template-name="adtmodellifecycle">
     <div class="form-row">
-        <ul style="background: #fff; min-width: 680px; margin-bottom: 20px;" id="node-input-adt-tabs"></ul>
+        <label for="node-input-Name"><i class="fa fa-bookmark"></i> <span> Name</span></label>
+        <input type="text" id="node-input-Name">
     </div>
-    <div id="node-input-adt-tabs-content" style="min-height: 170px;">
-        <div id="compact-adt-tab-general" style="display:none">
+    <div class="form-row">
+        <label for="node-input-ADTConnection"><i class="fa fa-gear"></i> <span> ADT Connection</span></label>
+        <input type="text" id="node-input-ADTConnection">
+    </div>
+    <div class="form-row">
+        <label for="node-input-operationtype"><i class="icon-tag"></i> <span>Operation to ADT</span></label>
+        <select id="node-input-operationtype">
+            <option value="get">Find Twin</option>
+            <option value="create">Create Twin</option>
+            <option value="delete">Delete Twin</option>                    
+        </select>
+    </div>            
+</script>
+
+<script type="text/x-red" data-help-name="adtmodellifecycle">
+    <p>A simple service that Get, Create, Update or Delete a Model at ADT</p>
+</script>
+
+<script type="text/x-red" data-template-name="adttwinlifecycle">
+    <div class="form-row">
+        <ul style="background: #fff; min-width: 680px; margin-bottom: 20px;" id="node-input-adttwins-tabs"></ul>
+    </div>
+    <div id="node-input-adttwins-tabs-content" style="min-height: 170px;">
+        <div id="compact-adttwins-tab-general" style="display:none">
             <div class="form-row">
-                <label for="node-input-DigitalTwinsUrl"><i class="icon-tag"></i> <span>ADT URL</span></label>
-                <input type="text" id="node-input-DigitalTwinsUrl" placeholder="%DigitalTwinsUrl%">
+                <label for="node-input-Name"><i class="fa fa-bookmark"></i> <span> Name</span></label>
+                <input type="text" id="node-input-Name">
             </div>
-			<div class="form-row">
-                <label for="node-input-TenantId"><i class="icon-tag"></i> <span>TenantId</span></label>
-                <input type="text" id="node-input-TenantId" placeholder="%TenantId%">
+            <div class="form-row">
+                <label for="node-input-ADTConnection"><i class="fa fa-gear"></i> <span> ADT Connection</span></label>
+                <input type="text" id="node-input-ADTConnection">
             </div>
-			<div class="form-row">
-                <label for="node-input-ClientId"><i class="icon-tag"></i> <span>ClientId</span></label>
-                <input type="text" id="node-input-ClientId" placeholder="%ClientId%">
+            <div class="form-row">
+                <label for="node-input-operationtype"><i class="icon-tag"></i> <span>Operation</span></label>
+                <select id="node-input-operationtype">
+                    <option value="get">Find Twin</option>
+                    <option value="create">Create Twin</option>
+                    <option value="update">Update Twin</option>
+                    <option value="delete">Delete Twin</option>                    
+                    <option value="publish">Push Telemetry</option>                            
+                </select>
             </div>
-			<div class="form-row">
-                <label for="node-input-ClientSecret"><i class="icon-tag"></i> <span>ClientSecret</span></label>
-                <input type="text" id="node-input-ClientSecret" placeholder="%ClientSecret%">
+            <div class="form-row model-row">
+                <label for="node-input-model"><i class="icon-tag"></i> <span> ADT Model</span></label>
+                <input type="text" id="node-input-model" placeholder="%dtmi:.....;x">
+            </div>
+            <div class="form-row deleterelationships-row">
+                <label for="node-input-deleterelationships"><i class="icon-tag"></i> <span> Delete Relationships in the same time?</span></label>
+                <input type="checkbox" id="node-input-deleterelationships" style="max-width:30px">
             </div>
         </div>
-        <div id="compact-adt-tab-twin" style="display:none">
-            <div class="form-row dps-row">
+        <div id="compact-adttwins-tab-propmappings" style="display:none">
+            <div class="form-row node-input-adttwins-propmappings-container-row" style="margin-bottom: 0px;">
+                <div id="node-input-adttwins-propmappings-container-div"
+                    style="box-sizing: border-box; border-radius: 5px;
+                    height: 450px; padding: 5px; border: 1px solid #ccc; overflow-y:scroll;">
+                    <ol id="node-input-adttwins-propmappings-container" style="list-style-type:none; margin: 0;"></ol>
+                </div>
+            </div>
+            <div class="form-row">
+                <a href="#" class="editor-button editor-button-small" id="node-input-adttwins-propmappings-add"
+                    style="margin-top: 4px;"><i class="fa fa-plus"></i>
+                <span data-i18n="propmappings-addButton"></span></a>
+            </div>
+        </div>
+        <div id="compact-adttwins-tab-tagmappings" style="display:none">
+            <div class="form-row node-input-adttwins-tagmappings-container-row" style="margin-bottom: 0px;">
+                <div id="node-input-adttwins-tagmappings-container-div"
+                    style="box-sizing: border-box; border-radius: 5px;
+                    height: 450px; padding: 5px; border: 1px solid #ccc; overflow-y:scroll;">
+                    <ol id="node-input-adttwins-tagmappings-container" style="list-style-type:none; margin: 0;"></ol>
+                </div>
+            </div>
+            <div class="form-row">
+                <a href="#" class="editor-button editor-button-small" id="node-input-adttwins-tagmappings-add"
+                    style="margin-top: 4px;"><i class="fa fa-plus"></i>
+                <span data-i18n="tagmappings-addButton"></span></a>
             </div>
         </div>
     </div>
 </script>
 
-<script type="text/html" data-help-name="adttwincreate">
-    <p>A simple service that create a Digital Twin at ADT</p>
+<script type="text/x-red" data-help-name="adttwinlifecycle">
+    <p>A simple service that Get, Create, Update or Delete a Digital Twin at ADT</p>
 </script>
 
 <script type="text/x-red" data-template-name="azureiothubreceiver">
     <div class="form-row">
-        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
-        <input type="text" id="node-input-name" placeholder="%Name%">
+        <label for="node-input-Name"><i class="fa fa-bookmark"></i> Name</label>
+        <input type="text" id="node-input-Name" placeholder="%Name%">
     </div>
     <div class="form-row">
-        <label for="node-input-ConnectionString"><i class="icon-tag"></i> <span>Connection String</span></label>
-        <input type="text" id="node-input-ConnectionString" placeholder="%ConnectionString%">
-    </div>
-	<div class="form-row">
-        <label for="node-input-ConsumerGroup"><i class="icon-tag"></i> <span>Consumer Group</span></label>
-        <input type="text" id="node-input-ConsumerGroup" placeholder="%ConsumerGroup%">
+		<label for="node-input-IOTHUBConnection"><i class="fa fa-gear"></i> <span> IoT Hub Connection</span></label>
+        <input type="text" id="node-input-IOTHUBConnection">
     </div>
 	<div class="form-row">
         <p>/!\ when your node falls into error because of a wrong configuration, you have to restart node-red to apply your update.</p>
@@ -120,3 +613,94 @@
     <p>A simple node for receiving device-to-cloud messages via default Azure Events Hub endpoint or Consumer Groups.</p>
 </script>
 
+<script type="text/x-red" data-template-name="azureeventhubreceiver">
+    <div class="form-row">
+        <label for="node-input-Name"><i class="fa fa-bookmark"></i> Name</label>
+        <input type="text" id="node-input-Name" placeholder="%Name%">
+    </div>
+    <div class="form-row">
+        <label for="node-input-ConnectionString"><i class="fa fa-key"></i><span> Connection String</span></label>
+        <input type="text" id="node-input-ConnectionString" placeholder="%ConnectionString%">
+    </div>	
+    <div class="form-row">
+        <label for="node-input-HubName"><i class="fa fa-list"></i> Hub name</label>
+        <input type="text" id="node-input-HubName" placeholder="%DeviceId%">
+    </div>
+	<div class="form-row">
+        <label for="node-input-ConsumerGroup"><i class="fa fa-group"></i><span> Consumer Group</span></label>
+        <input type="text" id="node-input-ConsumerGroup" placeholder="%ConsumerGroup%">
+    </div>	
+</script>
+
+<script type="text/x-red" data-help-name="azureeventhubreceiver">
+    <p>A simple node for receiving device-to-cloud messages via default Azure Events Hub endpoint or Consumer Groups.</p>
+</script>
+
+<script type="text/x-red" data-template-name="azureiothubdevicetwinsender">
+    <div class="form-row">
+        <label for="node-input-Name"><i class="fa fa-bookmark"></i> Name</label>
+        <input type="text" id="node-input-Name" placeholder="%Name%">
+    </div>
+    <div class="form-row">
+		<label for="node-input-IOTHUBConnection"><i class="fa fa-gear"></i> <span> IoT Hub Connection</span></label>
+        <input type="text" id="node-input-IOTHUBConnection">
+    </div>
+	<div class="form-row">
+        <label for="node-input-TagsAndDesired"><i class="icon-tag"></i> <span> Tags and Desired Properties</span></label>
+		<div style="height: 250px; min-height:150px;" class="node-text-editor" id="node-input-TagsAndDesired"></div>
+    </div>
+	<div class="form-row">
+        <label for="node-input-ReportedProperties"><i class="icon-tag"></i> <span> Reported Properties</span></label>
+		<div style="height: 250px; min-height:150px;" class="node-text-editor" id="node-input-ReportedProperties"></div>
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="azureiothubdevicetwinsender">
+    <p>A simple node to simulate de device for device twin management.</p>
+</script>
+
+<script type="text/x-red" data-template-name="adt-connection">
+    <div class="form-row">
+        <label for="node-config-input-Name"><i class="fa fa-bookmark"></i> Name</label>
+        <input type="text" id="node-config-input-Name">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-DigitalTwinsUrl"><i class="fa fa-at"></i> ADT Url</label>
+        <input type="text" id="node-config-input-DigitalTwinsUrl">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-TenantId"><i class="fa fa-gear"></i> TenantId</label>
+        <input type="text" id="node-config-input-TenantId">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-ClientId"><i class="fa fa-user"></i> ClientId</label>
+        <input type="text" id="node-config-input-ClientId">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-ClientSecret"><i class="fa fa-key"></i> ClientSecret</label>
+        <input type="text" id="node-config-input-ClientSecret">
+    </div>
+</script>
+
+<script type="text/x-red" data-template-name="iothub-connection">
+    <div class="form-row">
+        <label for="node-config-input-Name"><i class="fa fa-bookmark"></i> Name</label>
+        <input type="text" id="node-config-input-Name">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-ConnectionString"><i class="fa fa-key"></i><span> Connection String</span></label>
+        <input type="text" id="node-config-input-ConnectionString" placeholder="%ConnectionString%">
+    </div>	
+	<div class="form-row">
+        <label for="node-config-input-ConsumerGroup"><i class="fa fa-group"></i><span> Consumer Group</span></label>
+        <input type="text" id="node-config-input-ConsumerGroup" placeholder="%ConsumerGroup%">
+    </div>	
+    <div class="form-row">
+        <label for="node-config-input-DeviceId"><i class="fa fa-mobile"></i> Device Id</label>
+        <input type="text" id="node-config-input-DeviceId" placeholder="%DeviceId%">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-DeviceConnectionString"><i class="icon-key"></i> <span> Device Connection String</span></label>
+        <input type="text" id="node-config-input-DeviceConnectionString" placeholder="%ConnectionString with DeviceId%">
+    </div>
+</script>

@@ -3,7 +3,7 @@
 This library of Node-RED nodes can be used to simplify the way we connect Azure IoT Hub (using one of its Event Hubs consumer group) to Azure Digital Twins.
 
 For the moment we introduced two modules (more to come)
-- IoTHubReceiver: that connect to Azure IoT Hub and send a structure with 2 properties (IoTData, MessageDate, DeviceId)
+- IoTHubReceiver: that connect to Azure IoT Hub and send a structure with 3 properties (IoTData, MessageDate, DeviceId)
 - ADTTwinCreate: that create a Twin at Azure Digital Twins
 
 ## Related GitHub projects

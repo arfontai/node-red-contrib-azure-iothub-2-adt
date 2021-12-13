@@ -23,6 +23,11 @@
     },
     {
       "@type": "Property",
+      "name": "LastKnownTemperature",
+      "schema": "double"
+    },
+    {
+      "@type": "Property",
       "name": "AverageTemperature",
       "schema": "double"
     },

@@ -6,8 +6,9 @@ const { EventHubProducerClient, EventHubConsumerClient } = require('@azure/event
 const { convertIotHubToEventHubsConnectionString } = require('./iot-hub-connection-string.js');
 
 class EventHubReader {
-  constructor(iotHubConnectionString, consumerGroup) {
+  constructor(iotHubConnectionString, eventHubName, consumerGroup) {
     this.iotHubConnectionString = iotHubConnectionString;
+	this.eventHubName = eventHubName;
     this.consumerGroup = consumerGroup;
   }
 
@@ -41,7 +42,6 @@ class EventHubReader {
     }
   }
 
-  // Close connection to Event Hub.
   async stopReadMessage() {
     const disposeHandlers = [];
     this.receiveHandlers.forEach((receiveHandler) => {
@@ -50,6 +50,34 @@ class EventHubReader {
     await Promise.all(disposeHandlers);
 
     this.consumerClient.close();
+  }
+  
+  async startReceiceTwinUpdates(node, startReceiceTwinUpdatesCallback) {
+    try {
+		const consumerClient = new EventHubConsumerClient(this.consumerGroup, this.iotHubConnectionString, this.eventHubName);
+		console.log('Successfully created the EventHubConsumerClient from Event Hub connection string.');
+
+		const partitionIds = await consumerClient.getPartitionIds();
+		console.log('The partition ids are: ', partitionIds);
+
+		node.status({ fill: "green", shape:"dot", text: "Connected" });
+		consumerClient.subscribe({
+			processEvents: (events, context) => {
+				for (let i = 0; i < events.length; ++i) {
+					startReceiceTwinUpdatesCallback(
+					  events[i].body,
+					  events[i].properties.hubName,
+					  events[i].properties.deviceId);
+				}
+			},
+			processError: (err, context) => {
+				console.error(err.message || err);
+				node.status({ fill: "grey", shape:"dot", text: "Error" });
+			}
+		});
+	} catch (ex) {
+		console.error(ex.message || ex);
+	}
   }
 }
 
