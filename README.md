@@ -21,49 +21,51 @@ Here are the very few step you would have to do to setup your environment
 ```shell
 az ad sp create-for-rbac -n "yourApp"
 ```
-Save the **appId** we will reuse as the clientId to authenticate against ADT
-{
-  "appId": "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "displayName": "yourApp",
-  "name": "-----",
-  "password": "-----",
-  "tenant": "------"
-}
+Save the **appId** we will reuse as the clientId to authenticate against ADT :
+
+{ <br />
+     "appId": "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx", <br />
+     "displayName": "yourApp", <br />
+  "name": "-----", <br />
+  "password": "-----", <br />
+  "tenant": "------" <br />
+} <br />
 
 2 -  Add a secret key to your Service Principal
 
 ```shell
 az ad sp credential reset --name "yourApp" --end-date YYYY-MM-DD --credential-description "Node"
 ```
-Save the **password** we will reuse as the clientSecret to authenticate against ADT
-{
-  "appId": "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "name": "yourApp",
-  "password": "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "tenant": "------"
-}
+Save the **password** we will reuse as the clientSecret to authenticate against ADT :
+
+{ <br />
+  "appId": "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx", <br />
+  "name": "yourApp", <br />
+  "password": "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx", <br />
+  "tenant": "------" <br />
+} <br />
 
 3 -  Grant ADT permissions to your Service Principal 
 
 ```shell
 az dt role-assignment create --dt-name YourADTInstanceName --assignee "your_appId" --role "Azure Digital Twins Data Owner"
 ```
-this output confirms all worked well
-{
-  "canDelegate": null,
-  "condition": null,
-  "conditionVersion": null,
-  "description": null,
-  "id": "....",
-  "name": "....",
-  "principalId": ".....",
-  "principalType": "ServicePrincipal",
-  "resourceGroup": ".....",
-  "roleDefinitionId": ".....",
-  "scope": ".....",
-  "type": "Microsoft.Authorization/roleAssignments"
-}
+this output confirms all worked well : 
 
+{ <br />
+  "canDelegate": null, <br />
+  "condition": null, <br />
+  "conditionVersion": null, <br />
+  "description": null, <br />
+  "id": "....", <br />
+  "name": "....", <br />
+  "principalId": ".....", <br />
+  "principalType": "ServicePrincipal", <br />
+  "resourceGroup": ".....", <br />
+  "roleDefinitionId": ".....", <br />
+  "scope": ".....", <br />
+  "type": "Microsoft.Authorization/roleAssignments" <br />
+} <br />
 
 
 ## Related GitHub projects
