@@ -53,7 +53,7 @@ module.exports = function(RED)
 				case "get":
 					try {
 						const modelId = msg.modelId;
-						const model = await serviceClient.getModel(modelId, true, null);
+						const model = await serviceClient.getModel(modelId);
 	
 						msg.model = model;
 						msg.status = 'Model found';
