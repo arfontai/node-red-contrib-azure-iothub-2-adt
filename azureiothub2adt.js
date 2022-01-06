@@ -161,27 +161,28 @@ module.exports = function(RED)
 				case "update":
 					try {				
 						//we synchronize reported properties from Device Twin at IoT Hub with Twin attributes at ADT
-						if (msg.deviceTwinUpdate.properties!=null && msg.deviceTwinUpdate.properties.reported!=null) {
+						if (msg.reportedProperties!=null) {
 							let updates = [];
-							for (let prop in msg.deviceTwinUpdate.properties.reported) {
-								if(!prop.startsWith("$")){							  
-									const adtAttribute = node.propmappings.find(mapping => mapping.iotHubName==prop);
-									var updateAttributePath;
-									if(adtAttribute!=null) {
-										updateAttributePath = "/" + adtAttribute.adtName;
-										console.log("Property " + prop + ", with value: " + msg.deviceTwinUpdate.properties.reported[prop] + " synchronized with updateAttribute " + updateAttributePath); 
-									}
-									else{
-										updateAttributePath = "/" + prop;
-										console.log("Property to synchronize with ADT: " + prop + ", with value: " + msg.deviceTwinUpdate.properties.reported[prop]); 
-									}
-									updates.push({
-										op: "add", // for the moment we prefer 'add' and not 'replace' because of the exception raised by ADT when the attribute is not yet defined at ADT
-										path: updateAttributePath,
-										value: msg.deviceTwinUpdate.properties.reported[prop]
-									});
+							msg.reportedProperties.forEach(prop => {
+								
+								console.log('property :' + prop);
+								
+								const adtAttribute = node.propmappings.find(mapping => mapping.iotHubName==prop.property);
+								var updateAttributePath;
+								if(adtAttribute!=null) {
+									updateAttributePath = "/" + adtAttribute.adtName;
+									console.log("Property " + prop.property + " from IoT Hub, with value: " + prop.value + " synchronized with the attribute " + updateAttributePath + " at ADT"); 
 								}
-							}
+								else{
+									updateAttributePath = "/" + prop.property;
+									console.log("IoT Hub Property to synchronize with ADT: " + prop.property + ", with value: " + prop.value); 
+								}
+								updates.push({
+									op: "add", // for the moment we prefer 'add' and not 'replace' because of the exception raised by ADT when the attribute is not yet defined at ADT
+									path: updateAttributePath,
+									value: prop.value
+								});
+							});
 							console.log('patches sending to ADT :' + inspect(updates));
 							var result = await serviceClient.updateDigitalTwin(digitalTwinId, updates);
 							
@@ -190,30 +191,33 @@ module.exports = function(RED)
 							node.send(msg);
 							console.log(msg.status + ' : ' + inspect(result));
 						}
+
 						//we synchronize tags from Device Twin at IoT Hub with Twin attributes at ADT
-						if (msg.deviceTwinUpdate.tags!=null) {
-							for (let tag in msg.deviceTwinUpdate.tags) {
-								const tagmap = node.tagmappings.find(mapping => mapping.iotHubName==tag);
+						if (msg.tags!=null) {
+							msg.tags.forEach(t => {
+								const tagmap = node.tagmappings.find(mapping => mapping.iotHubName==t.tag);
 								if(tagmap!=null) {
 									let relationship =   {
 										"$relationshipId":  v4(),
 										"$sourceId": msg.twinId,
 										"$relationshipName": tagmap.adtName,
-										"$targetId": msg.deviceTwinUpdate.tags[tag]
+										"$targetId": t.value
 									};
 
-									var result = await serviceClient.upsertRelationship(
-										relationship["$sourceId"],
-										relationship["$relationshipId"],
-										relationship
-									);
+									(async () => {
+										var result = await serviceClient.upsertRelationship(
+											relationship["$sourceId"],
+											relationship["$relationshipId"],
+											relationship
+										);
 
-									msg.status = 'Relationship created';
-									msg.trace = msg.trace + ' ,' + msg.status + ' : ' + result.body;
-									node.send(msg);
-									console.log(msg.status + ' : ' + inspect(result.body));
+										msg.status = 'Relationship created';
+										msg.trace = msg.trace + ' ,' + msg.status + ' : ' + result.body;
+										node.send(msg);
+										console.log(msg.status + ' : ' + inspect(result.body));
+									})().catch();
 								}
-							}	
+							});	
 						}
 					} catch (err) {
 						output = 'Error while trying to patch the Twin at ADT. Does the Twin or Property exist?';
@@ -250,12 +254,15 @@ module.exports = function(RED)
 				
 				case "publish":
 					try {		
-						payload = await serviceClient.publishTelemetry(digitalTwinId, JSON.stringify(msg.d2cMessage), v4());
+						console.log('publish to twin : ' + digitalTwinId);
+						// const telemetryPayload = '{"Telemetry1": 5}';
+						// var result = await serviceClient.publishTelemetry(digitalTwinId, telemetryPayload, v4());
+						var result = await serviceClient.publishTelemetry(digitalTwinId, JSON.stringify(msg.d2cMessage), v4());
 						
 						msg.status = 'Telemetry sent';
-						msg.trace = msg.trace + ' ,' + msg.status + ' : ' + result.body;
+						msg.trace = msg.trace + ' ,' + msg.status + ' : ' + result;
 						node.send(msg);
-						console.log(msg.status + ' : ' + inspect(result.body));
+						console.log(msg.status);
 					} catch (err) {
 						output = 'Error while trying to push telemetry to the Twin at ADT. Does the twin exist?';
 						error(node, err, output);
@@ -292,6 +299,7 @@ module.exports = function(RED)
 						
 						const payload = {
 							d2cMessage: message,
+							reportedProperties: [],
 							messageDate: date || Date.now().toISOString(),
 							deviceId: deviceId,
 						};
@@ -327,12 +335,31 @@ module.exports = function(RED)
 					try {
 						setStatus(node, statusEnum.received);
 						
-						console.log('update: ' + JSON.stringify(update));
-						console.log('hubName: ' + hubName);
-						console.log('deviceId: ' + deviceId);
+						let properties = [];
+						let tags = [];
+
+						if (update.properties!=null && update.properties.reported!=null) {
+							for (let prop in update.properties.reported) {
+								if(!prop.startsWith("$")){							  
+									properties.push( { property:prop, value:update.properties.reported[prop] });
+								}
+							}
+							console.log('reported properties to synchronize with ADT :' + inspect(properties));
+						}
+
+						//we synchronize tags from Device Twin at IoT Hub with Twin attributes at ADT
+						if (update.tags!=null) {
+							for (let t in update.tags) {
+								tags.push( { tag:t, value:update.tags[t] });
+							}
+							console.log('tags to synchronize with ADT :' + inspect(tags));
+						}
 						
 						const payload = {
+							payload : update,
 							deviceTwinUpdate: update,
+							reportedProperties: properties,
+							tags: tags,
 							hubName: hubName,
 							deviceId: deviceId
 						};
@@ -365,13 +392,13 @@ module.exports = function(RED)
 		
 		node.on('input', async function(msg) 
 		{
-			console.log('Tags ' + node.TagsAndDesired);
-			console.log('ReportedProperties ' + node.ReportedProperties);
+			console.log('Tags and Desired Properties' + node.TagsAndDesired);
+			console.log('Reported Properties ' + node.ReportedProperties);
 
 			(async () => {
 				await deviceTwinHandler.sendDeviceTwinUpdate(
 					node, 
-					node.IOTHUBConnection.DeviceId, 
+					node.DeviceId, 
 					JSON.parse(node.TagsAndDesired), 
 					JSON.parse(node.ReportedProperties)
 				);
@@ -391,7 +418,6 @@ module.exports = function(RED)
         RED.nodes.createNode(this,n);
         this.ConnectionString = n.ConnectionString;
         this.ConsumerGroup = n.ConsumerGroup;
-		this.DeviceId = n.DeviceId;
 		this.DeviceConnectionString = n.DeviceConnectionString;
     }
 	

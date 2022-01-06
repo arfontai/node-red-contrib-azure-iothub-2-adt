@@ -77,27 +77,32 @@ async function convertIotHubToEventHubsConnectionString(connectionString) {
 
     return new Promise((resolve, reject) => {
         receiver.on(ReceiverEvents.receiverError, (context) => {
-            const error = context.receiver && context.receiver.error;
-            if (isAmqpError(error) && error.condition === "amqp:link:redirect") {
-                const hostname = error.info && error.info.hostname;
-                const parsedAddress = error.info.address.match(/5671\/(.*)\/\$management/i);
+            try {
+                const error = context.receiver && context.receiver.error;
+                if (isAmqpError(error) && error.condition === "amqp:link:redirect") {
+                    const hostname = error.info && error.info.hostname;
+                    const parsedAddress = error.info.address.match(/5671\/(.*)\/\$management/i);
 
-                if (!hostname) {
-                    reject(error);
-                } else if (parsedAddress == undefined || (parsedAddress && parsedAddress[1] == undefined)) {
-                    const msg = `Cannot parse the EventHub name from the given address: ${error.info.address} in the error: ` +
-                        `${error.stack}\n${JSON.stringify(error.info)}.\nThe parsed result is: ${JSON.stringify(parsedAddress)}.`;
-                    reject(Error(msg));
+                    if (!hostname) {
+                        reject(error);
+                    } else if (parsedAddress == undefined || (parsedAddress && parsedAddress[1] == undefined)) {
+                        const msg = `Cannot parse the EventHub name from the given address: ${error.info.address} in the error: ` +
+                            `${error.stack}\n${JSON.stringify(error.info)}.\nThe parsed result is: ${JSON.stringify(parsedAddress)}.`;
+                        reject(Error(msg));
+                    } else {
+                        const entityPath = parsedAddress[1];
+                        resolve(`Endpoint=sb://${hostname}/;EntityPath=${entityPath};SharedAccessKeyName=${SharedAccessKeyName};SharedAccessKey=${SharedAccessKey}`);
+                    }
                 } else {
-                    const entityPath = parsedAddress[1];
-                    resolve(`Endpoint=sb://${hostname}/;EntityPath=${entityPath};SharedAccessKeyName=${SharedAccessKeyName};SharedAccessKey=${SharedAccessKey}`);
+                    reject(error);
                 }
-            } else {
-                reject(error);
+                connection.close().catch(() => {
+                    /* ignore error */
+                });
+            } catch (err) {
+                output = 'Error in receiver.on.';
+                error(node, err, output);
             }
-            connection.close().catch(() => {
-                /* ignore error */
-            });
         });
     });
 }

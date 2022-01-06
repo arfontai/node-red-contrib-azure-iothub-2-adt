@@ -432,6 +432,7 @@
         defaults: {
 			Name: {value:"", required:false},
 			IOTHUBConnection: {value:"", type:"iothub-connection"},
+            DeviceId: {value:"", required:true},
 			TagsAndDesired: {value:"", required:false},
 			ReportedProperties: {value:"", required:false}
         },
@@ -495,7 +496,6 @@
 			Name: {value:"", required:true},
 			ConnectionString: {value:"", required:true},
 			ConsumerGroup: {value:"", required:true},
-			DeviceId: {value:"", required:true},
 			DeviceConnectionString: {value:"", required:true},
         },
         label: function() {
@@ -624,7 +624,7 @@
     </div>	
     <div class="form-row">
         <label for="node-input-HubName"><i class="fa fa-list"></i> Hub name</label>
-        <input type="text" id="node-input-HubName" placeholder="%DeviceId%">
+        <input type="text" id="node-input-HubName" placeholder="%HubName%">
     </div>
 	<div class="form-row">
         <label for="node-input-ConsumerGroup"><i class="fa fa-group"></i><span> Consumer Group</span></label>
@@ -645,6 +645,10 @@
 		<label for="node-input-IOTHUBConnection"><i class="fa fa-gear"></i> <span> IoT Hub Connection</span></label>
         <input type="text" id="node-input-IOTHUBConnection">
     </div>
+    <div class="form-row">
+        <label for="node-input-DeviceId"><i class="fa fa-mobile"></i> Device Id</label>
+        <input type="text" id="node-input-DeviceId" placeholder="%DeviceId%">
+    </div>    
 	<div class="form-row">
         <label for="node-input-TagsAndDesired"><i class="icon-tag"></i> <span> Tags and Desired Properties</span></label>
 		<div style="height: 250px; min-height:150px;" class="node-text-editor" id="node-input-TagsAndDesired"></div>
@@ -695,10 +699,6 @@
         <label for="node-config-input-ConsumerGroup"><i class="fa fa-group"></i><span> Consumer Group</span></label>
         <input type="text" id="node-config-input-ConsumerGroup" placeholder="%ConsumerGroup%">
     </div>	
-    <div class="form-row">
-        <label for="node-config-input-DeviceId"><i class="fa fa-mobile"></i> Device Id</label>
-        <input type="text" id="node-config-input-DeviceId" placeholder="%DeviceId%">
-    </div>
     <div class="form-row">
         <label for="node-config-input-DeviceConnectionString"><i class="icon-key"></i> <span> Device Connection String</span></label>
         <input type="text" id="node-config-input-DeviceConnectionString" placeholder="%ConnectionString with DeviceId%">
