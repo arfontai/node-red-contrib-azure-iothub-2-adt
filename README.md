@@ -88,11 +88,11 @@ To simulate Device to Cloud messages sent to Azure IoT Hub, we recommand to use 
 
 # Getting Started
 
-## Scenario 1 - Publish IoT Hub D2C messages as Telemetry
+## Sample 1 - Publish IoT Hub D2C messages as Telemetry
 
-Let's start with a simple flow where we receive Device to Cloud messages from our Azure IoT Hub we publish as telemetry to the according Twin at Azure Digital Twins. In this example we pick three nodes. The IoT Hub Receiver, the change node we use to set the **TwinId** value to the **DeviceId** observed on IoT Hub, and the ADTTwinLifecycle node we configure to push telemetry. You will find the flow bellow, enriched with log modules.<br />
+Let's start with a simple flow where we receive Device to Cloud messages from our Azure IoT Hub we publish as telemetry to the according Twin at Azure Digital Twins. In this example we pick three nodes. The IoT Hub Receiver, the change node we use to set the **TwinId** value to the **DeviceId** observed on IoT Hub, and the ADTTwinLifecycle node we configure to with the 'Push telemetry' operation. You will find the flow below, enriched with log modules.<br />
 
-[![Scenario1](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario1.png "publish IoT Hub D2C messages as Telemetry")](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario1.png "publish IoT Hub D2C messages as Telemetry")
+[![Scenario1](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario1.png "Publish IoT Hub D2C messages as Telemetry")](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario1.png "Publish IoT Hub D2C messages as Telemetry")
 
 The JSON for this flow
 
@@ -100,7 +100,62 @@ The JSON for this flow
 [{"id":"46d3a66181399937","type":"azureiothubreceiver","z":"96bd88c9e5850c22","Name":"","IOTHUBConnection":"","x":180,"y":1160,"wires":[["a6a0671d79e880f3","b16c3eedbd1331e9"]]},{"id":"a6a0671d79e880f3","type":"debug","z":"96bd88c9e5850c22","name":"log IoTHub D2C messages","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":620,"y":1100,"wires":[]},{"id":"2b9ee9dd59e9376b","type":"adttwinlifecycle","z":"96bd88c9e5850c22","Name":"Publish Telemetry","ADTConnection":"","operationtype":"publish","model":"","deleterelationships":false,"propmappings":[],"tagmappings":[],"x":810,"y":1220,"wires":[["0c402604842122d2"]]},{"id":"0c402604842122d2","type":"debug","z":"96bd88c9e5850c22","name":"output Publish Telemetry","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1090,"y":1220,"wires":[]},{"id":"3163681b651e32c0","type":"comment","z":"96bd88c9e5850c22","name":"Receiving D2C messages","info":"","x":190,"y":1100,"wires":[]},{"id":"b16c3eedbd1331e9","type":"change","z":"96bd88c9e5850c22","name":"","rules":[{"t":"set","p":"twinId","pt":"msg","to":"deviceId","tot":"msg"}],"action":"","property":"","from":"","to":"","reg":false,"x":520,"y":1220,"wires":[["2b9ee9dd59e9376b"]]}]
 ```
 
-## Related GitHub projects
+## Sample 2 - Patch a Twin from a D2C message
+
+We now extend the flow we created through the Sample 1, with nodes used to patch Digital Twin parameters from values read into the D2C message. The first step is to add a new change property in the existing Change node. In our example (refer to **2 - How to easily send Device to Cloud messages** in the Prerequisites section to play with the D2C message structure) we extract the Temperature value from the D2C payload, we associate to the property 'TargetTemperature'. Because the ADTTwinLifecycle uses the reportedProperties array as an input to patch the Digital Twin at ADT, we simply add our Property/Value element to the array with the following expression.<br />
+
+[![Scenario2changeNode](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario2changeNode.png "Change Node configuration")](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario2changeNode.png "Change Node configuration")
+
+The second step is to add a new ADTTwinLifecycle module to our flow. The existing one will still push the D2C message as telemetry to the Twin. This new instance will have the responsability to patch the Twin itself. Notice we could either operate these two instances in parallel or in sequence, what we are going to do there. To finish the configuration we set the operation to 'Update Twin' on the newly added ADTTwinLifecycle module.<br />
+
+[![Scenario2](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario2.png "Patch a Twin from a D2C message")](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario2.png "Patch a Twin from a D2C message")
+
+The JSON for this flow
+
+```shell
+[{"id":"46d3a66181399937","type":"azureiothubreceiver","z":"96bd88c9e5850c22","Name":"","IOTHUBConnection":"","x":180,"y":1160,"wires":[["a6a0671d79e880f3","b16c3eedbd1331e9"]]},{"id":"a6a0671d79e880f3","type":"debug","z":"96bd88c9e5850c22","name":"log IoTHub D2C messages","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":620,"y":1100,"wires":[]},{"id":"2b9ee9dd59e9376b","type":"adttwinlifecycle","z":"96bd88c9e5850c22","Name":"Update TWIN","ADTConnection":"","operationtype":"update","model":"","deleterelationships":false,"propmappings":[],"tagmappings":[],"x":800,"y":1220,"wires":[["0c402604842122d2","4b42695859f0f280"]]},{"id":"0c402604842122d2","type":"debug","z":"96bd88c9e5850c22","name":"output Update Twin","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1090,"y":1100,"wires":[]},{"id":"3163681b651e32c0","type":"comment","z":"96bd88c9e5850c22","name":"Receiving D2C messages","info":"","x":190,"y":1100,"wires":[]},{"id":"b16c3eedbd1331e9","type":"change","z":"96bd88c9e5850c22","name":"","rules":[{"t":"set","p":"twinId","pt":"msg","to":"deviceId","tot":"msg"},{"t":"set","p":"reportedProperties","pt":"msg","to":"$append(\t   reportedProperties,\t   {\t       \"property\":\"TargetTemperature\",\t       \"value\": d2cMessage.temperatureSensor[1].data[0].temperature\t   }\t)","tot":"jsonata"}],"action":"","property":"","from":"","to":"","reg":false,"x":520,"y":1220,"wires":[["2b9ee9dd59e9376b"]]},{"id":"4b42695859f0f280","type":"adttwinlifecycle","z":"96bd88c9e5850c22","Name":"publish Telemetry","ADTConnection":"","operationtype":"publish","model":"","deleterelationships":false,"propmappings":[],"tagmappings":[],"x":1110,"y":1220,"wires":[["83168856cbc115e7"]]},{"id":"83168856cbc115e7","type":"debug","z":"96bd88c9e5850c22","name":"output Publish Telemetry","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1410,"y":1100,"wires":[]}]
+```
+
+## Sample 3 - Patch Twins and Create Relationships from Device twin updates
+
+In this sample we are going to reuse the Twin update capabiities of our ADTTwinLifecycle module when we trigger this time a Device Twin update at Azure IoT Hub. By update we either consider a change on a reported property or a tag. **We decided to associate Reported properties with Twin properties, and Tags with relationships between Twins.** 
+(refer to **1 - How to easily send Device Twin updates** in the Prerequisites section to understand the Device twin structure we use for this sample).
+
+Before configuring your nodes, you may have to apply some change to your IoT Hub, so that you route your Device Twin updates to an Event Hub. We will indeed use an Event Hub receiver node, to play with the Device twin updates. THis note will help you to configure your IoT Hub: https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-messages-d2c#non-telemetry-events.
+
+This initial step being done, we will start our flow by picking one Event Huve Receiver node. After extratcting the Device Id, we will use our ADTTwinLifecycle module to check if a Twin based on the Device Id exists at ADT. If not we create a new Twin and then apply the updates from the Reported properties and Tags received. Because properties names may differ from Azure IoT Hub to Azure Digital Twins, we added a mapping tab on our ADTTwinLifecycle module.
+
+In this tab we specify that a property 'Temperature' on the Device Twin from IoT Hub should be mapped to a property 'TargetTemperature' at ADT.<br />
+
+[![Scenario3propMapping](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario3propMapping.png "Properties mapping")](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario3propMapping.png "Properties mapping")
+
+In this tab we specify that a tag 'floor' on the Device Twin from IoT Hub should be mapped to a relationship 'controlsTemperature' at ADT. The target of the relationship (a Digital Twin Id) being the value associated with tag.<br />
+
+[![Scenario3tagMapping](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario3tagMapping.png "Tag mapping")](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario3tagMapping.png "Tag mapping")
+
+Here is the full flow enriched with switch and debug nodes.<br />
+
+[![Scenario3](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario3.png "Patch Twins and Create Relationships from Device twin updates")](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario3.png "Patch Twins and Create Relationships from Device twin updates")
+
+The JSON for this flow
+
+```shell
+[{"id":"fdf15d3254342901","type":"azureeventhubreceiver","z":"96bd88c9e5850c22","Name":"Device Twin update receiver","ConnectionString":"","HubName":"devicetwinevents","ConsumerGroup":"node","x":180,"y":820,"wires":[["35511f8a763cd5d7","fd1fdaced0088d7a"]]},{"id":"35511f8a763cd5d7","type":"debug","z":"96bd88c9e5850c22","name":"EventHub receiver","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":470,"y":740,"wires":[]},{"id":"d1786885ee71a83a","type":"adttwinlifecycle","z":"96bd88c9e5850c22","Name":"Update Twin","ADTConnection":"","operationtype":"update","model":"","deleterelationships":false,"propmappings":[{"iotHubName":"Temperature","adtName":"TargetTemperature"}],"tagmappings":[{"iotHubName":"floor","adtName":"controlsTemperature"}],"x":1070,"y":920,"wires":[["2d37efc607af560b"]]},{"id":"2d37efc607af560b","type":"debug","z":"96bd88c9e5850c22","name":"output UpdateTwin","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1350,"y":920,"wires":[]},{"id":"a88bf71e844b6e5e","type":"adttwinlifecycle","z":"96bd88c9e5850c22","Name":"Get Twin","ADTConnection":"","operationtype":"get","model":"","deleterelationships":false,"propmappings":[],"tagmappings":[],"x":620,"y":860,"wires":[["2f99b3edb0a5899b","c1e5370713afca8a"]]},{"id":"2f99b3edb0a5899b","type":"debug","z":"96bd88c9e5850c22","name":"output GetTwin","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":820,"y":820,"wires":[]},{"id":"c1e5370713afca8a","type":"switch","z":"96bd88c9e5850c22","name":"","property":"status","propertyType":"msg","rules":[{"t":"cont","v":"Twin found","vt":"str"},{"t":"else"}],"checkall":"true","repair":false,"outputs":2,"x":630,"y":1000,"wires":[["d1786885ee71a83a"],["f24e39135ac587d2"]]},{"id":"71feac4d7cf3df66","type":"debug","z":"96bd88c9e5850c22","name":"output CreateTwin","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1350,"y":1040,"wires":[]},{"id":"bdc5aee359824371","type":"adttwinlifecycle","z":"96bd88c9e5850c22","Name":"Create Twin","ADTConnection":"","operationtype":"create","model":"dtmi:samples:Building;1","deleterelationships":false,"propmappings":[],"tagmappings":[],"x":1070,"y":1040,"wires":[["71feac4d7cf3df66","d1786885ee71a83a"]]},{"id":"4751588c024d8063","type":"comment","z":"96bd88c9e5850c22","name":"Receiving Device Twin updates through IoT Hub routing.","info":"","x":260,"y":700,"wires":[]},{"id":"fd1fdaced0088d7a","type":"change","z":"96bd88c9e5850c22","name":"","rules":[{"t":"set","p":"twinId","pt":"msg","to":"deviceId","tot":"msg"}],"action":"","property":"","from":"","to":"","reg":false,"x":440,"y":860,"wires":[["a88bf71e844b6e5e"]]},{"id":"f24e39135ac587d2","type":"change","z":"96bd88c9e5850c22","name":"","rules":[{"t":"set","p":"model","pt":"msg","to":"dtmi:samples:HVAC;1","tot":"str"}],"action":"","property":"","from":"","to":"","reg":false,"x":860,"y":1040,"wires":[["bdc5aee359824371"]]}]
+```
+
+## Scenario 4 - Get ADT Model definition
+
+In this last sample we demonstrate the usage of the model API from ADT. As a first step we use a change node to set the model we will look for. THe second step is to add our ADTModelLifecycle module with the operation set to 'Find Model'. Here is the full flow.<br />
+
+[![Scenario4](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario4.png "Get ADT Model definition")](https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt/blob/main/images/Scenario4.png "Get ADT Model definition")
+
+The JSON for this flow
+
+```shell
+[{"id":"542c60bd1e7c992b","type":"inject","z":"96bd88c9e5850c22","name":"","props":[{"p":"payload"},{"p":"topic","vt":"str"}],"repeat":"","crontab":"","once":false,"onceDelay":"","topic":"","payloadType":"date","x":1080,"y":240,"wires":[["708105848a2493a7"]]},{"id":"406e2cc514ee05c8","type":"debug","z":"96bd88c9e5850c22","name":"","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1730,"y":240,"wires":[]},{"id":"f2d263cb9de048ec","type":"adtmodellifecycle","z":"96bd88c9e5850c22","Name":"Get model","ADTConnection":"","operationtype":"get","x":1530,"y":240,"wires":[["406e2cc514ee05c8"]]},{"id":"beb7be3478ed4464","type":"comment","z":"96bd88c9e5850c22","name":"Get ADT Model","info":"","x":1080,"y":180,"wires":[]},{"id":"708105848a2493a7","type":"change","z":"96bd88c9e5850c22","name":"","rules":[{"t":"set","p":"model","pt":"msg","to":"\"dtmi:samples:Building;1\"","tot":"str"}],"action":"","property":"","from":"","to":"","reg":false,"x":1300,"y":240,"wires":[["f2d263cb9de048ec"]]}]
+```
+
+# Related GitHub projects
 Great Node project to simulate an Azure IoT Device: https://github.com/iotblackbelt/node-red-contrib-azure-iot-device<p>
 Sample Node app to ingest data from IoT Hub: https://github.com/Azure-Samples/web-apps-node-iot-hub-data-visualization<p>
 Azure IoT Hub SDK for Node: https://github.com/Azure/azure-iot-sdk-node<p>
