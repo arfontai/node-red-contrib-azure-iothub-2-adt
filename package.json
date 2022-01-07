@@ -1,7 +1,7 @@
 {
   "name": "node-red-contrib-azure-iothub-2-adt",
   "description": "Nodes to simplify the connection between Azure IoT Hub and Azure Digital Twins (ADT)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/arfontai/node-red-contrib-azure-iothub-2-adt.git"
